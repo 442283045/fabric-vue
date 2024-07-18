@@ -165,12 +165,11 @@ function handleRotate(direction: 'left' | 'right') {
     height: canvas.height,
   })
   group.add(...canvas.getObjects())
-  canvas.add(group)
+  // canvas.add(group)
   group.rotate((group.angle || 0) + (direction === 'left' ? -90 : 90))
   canvas.renderAll()
-  // 旋转之后，将group中的对象重新放回画布
-  canvas.add(...group.getObjects())
-  canvas.renderAll()
+
+  console.log(canvas.toJSON())
 }
 function handleZoomIn() {
   const centerX = canvas.getWidth() / 2
