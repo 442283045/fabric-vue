@@ -8,7 +8,6 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import UnoCSS from 'unocss/vite'
-import presetUno from '@unocss/preset-uno'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -26,9 +25,7 @@ export default defineConfig({
     Components({
       resolvers: [NaiveUiResolver()],
     }),
-    UnoCSS({
-      presets: [presetUno()],
-    }),
+    UnoCSS(),
   ],
   resolve: {
     alias: {

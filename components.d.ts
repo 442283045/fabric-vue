@@ -14,7 +14,7 @@ declare module 'vue' {
     IconSupport: typeof import('./src/components/icons/IconSupport.vue')['default']
     IconTooling: typeof import('./src/components/icons/IconTooling.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
-    NCheckbox: typeof import('naive-ui')['NCheckbox']
+    NIcon: typeof import('naive-ui')['NIcon']
     NRadioButton: typeof import('naive-ui')['NRadioButton']
     NRadioGroup: typeof import('naive-ui')['NRadioGroup']
     NSpace: typeof import('naive-ui')['NSpace']

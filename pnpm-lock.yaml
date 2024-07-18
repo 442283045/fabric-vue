@@ -33,6 +33,9 @@ importers:
         specifier: ^4.3.3
         version: 4.4.0(vue@3.4.32(typescript@5.4.5))
     devDependencies:
+      '@iconify-json/icon-park-outline':
+        specifier: ^1.1.15
+        version: 1.1.15
       '@rushstack/eslint-patch':
         specifier: ^1.8.0
         version: 1.10.3
@@ -45,6 +48,9 @@ importers:
       '@types/node':
         specifier: ^20.14.5
         version: 20.14.11
+      '@unocss/preset-icons':
+        specifier: ^0.61.5
+        version: 0.61.5
       '@unocss/preset-uno':
         specifier: ^0.61.5
         version: 0.61.5
@@ -499,6 +505,9 @@ packages:
   '@humanwhocodes/object-schema@2.0.3':
     resolution: {integrity: sha512-93zYdMES/c1D69yZiKDBj0V24vqNzB/koF26KPaagAfd3P/4gUlh3Dys5ogAK+Exi9QyzlD8x/08Zt7wIKcDcA==}
     deprecated: Use @eslint/object-schema instead
+
+  '@iconify-json/icon-park-outline@1.1.15':
+    resolution: {integrity: sha512-jQbk/ETARyYPjX6HolkdjSLJHsNCfSBfYUqcUQLXYK/1tfuVnQsUdWG2IM2a7VBpxJtrK7r4n1iwPOFaZ5T46g==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -3649,6 +3658,10 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/object-schema@2.0.3': {}
+
+  '@iconify-json/icon-park-outline@1.1.15':
+    dependencies:
+      '@iconify/types': 2.0.0
 
   '@iconify/types@2.0.0': {}
 
