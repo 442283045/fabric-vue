@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@iconify-json/carbon':
+        specifier: ^1.1.36
+        version: 1.1.36
+      '@iconify-json/lucide':
+        specifier: ^1.1.200
+        version: 1.1.200
       '@unocss/reset':
         specifier: ^0.61.5
         version: 0.61.5
@@ -506,8 +512,14 @@ packages:
     resolution: {integrity: sha512-93zYdMES/c1D69yZiKDBj0V24vqNzB/koF26KPaagAfd3P/4gUlh3Dys5ogAK+Exi9QyzlD8x/08Zt7wIKcDcA==}
     deprecated: Use @eslint/object-schema instead
 
+  '@iconify-json/carbon@1.1.36':
+    resolution: {integrity: sha512-NC3VcqLtwLZpi7+LeXj+99/byv+asrnCQxiDNCZV6hKr9WcNh6C25kJguJYfN+dV54kOkw78e+6PitQi2Bppnw==}
+
   '@iconify-json/icon-park-outline@1.1.15':
     resolution: {integrity: sha512-jQbk/ETARyYPjX6HolkdjSLJHsNCfSBfYUqcUQLXYK/1tfuVnQsUdWG2IM2a7VBpxJtrK7r4n1iwPOFaZ5T46g==}
+
+  '@iconify-json/lucide@1.1.200':
+    resolution: {integrity: sha512-imZeWdgMcJ6xZ15U0h35kehDcrVShvrTui3RvuY/ZUxFGC23wxPt1OQXiu+KQ/GEiujGEeOtQ1BL3Jf+7dQiqw==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -3659,7 +3671,15 @@ snapshots:
 
   '@humanwhocodes/object-schema@2.0.3': {}
 
+  '@iconify-json/carbon@1.1.36':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@iconify-json/icon-park-outline@1.1.15':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/lucide@1.1.200':
     dependencies:
       '@iconify/types': 2.0.0
 
