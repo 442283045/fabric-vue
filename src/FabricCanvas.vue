@@ -7,15 +7,21 @@ type Mode = '选择' | '移动' | '画笔' | '文字'
 let canvas: fabric.Canvas
 let mode: Mode = '选择'
 let isMoving = false
-let history: string[] = []
-let redoStack: string[] = []
+let history: string[] = shallowReactive([])
+let redoStack: string[] = shallowReactive([])
 let pencilBrush: fabric.PencilBrush
 let currentEditImg: fabric.FabricImage
-let dirty = false // 是否有未保存的更改
+let dirty = ref(false) // 是否有未保存的更改
 const CANVAS_WIDTH = 800
 const CANVAS_HEIGHT = 600
 const canvasZoomRatio = ref(100)
-
+const shouldUndo = computed(() => {
+  if (history.length === 1 && dirty.value === true) {
+    return true
+  }
+  return history.length > 1
+})
+const shouldRedo = computed(() => redoStack.length > 0)
 function setMode(newMode: Mode) {
   mode = newMode
   if (mode === '画笔') {
@@ -67,7 +73,7 @@ function initEventListener() {
       isMoving = true
     }
 
-    if (mode === '画笔' && dirty === true) {
+    if (mode === '画笔' && dirty.value === true) {
       saveState()
     }
 
@@ -108,7 +114,7 @@ function initEventListener() {
     }
     // 画笔模式下，将画笔绘制的路径添加到group中
     if (mode === '画笔') {
-      dirty = true
+      dirty.value = true
     }
   })
 
@@ -143,25 +149,26 @@ function completeTextInput() {
 function saveState(resetRedo = true) {
   history.push(canvas.toJSON())
   if (resetRedo) {
-    redoStack = []
+    redoStack.length = 0
   }
-  dirty = false
+  dirty.value = false
   console.log('state saved', history)
 }
 
 // 撤销
 async function handleUndo() {
-  if (history.length === 1 && dirty === true) {
+  if (history.length === 1 && dirty.value === true) {
     saveState(false)
     redoStack.push(history.pop()!)
     await canvas.loadFromJSON(history[0])
-    dirty = false
+    dirty.value = false
   }
   if (history.length > 1) {
-    if (dirty === true) {
+    if (dirty.value === true) {
       saveState(false)
       redoStack.push(history.pop()!)
       await canvas.loadFromJSON(history.pop()!)
+      dirty.value = true
     } else {
       const currentState = history.pop()!
       redoStack.push(currentState)
@@ -177,11 +184,11 @@ async function handleUndo() {
 async function handleRedo() {
   if (redoStack.length > 0) {
     const redoState = redoStack.pop()!
-    if (dirty === true) {
+    if (dirty.value === true) {
       saveState(false)
     }
     await canvas.loadFromJSON(redoState)
-    dirty = true
+    dirty.value = true
     canvas.renderAll()
   }
   console.log('redo', redoStack)
@@ -388,10 +395,12 @@ const modes = ref<{ label: Mode; event: Function }[]>([
         </n-button>
       </n-space>
       <n-space align="center" class="bg-[#ECECF4] rounded-md">
+        <!-- undo -->
         <n-button
           :bordered="false"
           class="hover:bg-[#f1f0ff]!"
           @click="handleUndo"
+          :disabled="!shouldUndo"
           title="撤销"
           :focusable="false"
         >
@@ -399,10 +408,12 @@ const modes = ref<{ label: Mode; event: Function }[]>([
             <div class="i-carbon:undo"></div>
           </template>
         </n-button>
+        <!-- redo -->
         <n-button
           :bordered="false"
           class="hover:bg-[#f1f0ff]!"
           @click="handleRedo"
+          :disabled="!shouldRedo"
           title="重做"
           :focusable="false"
         >
