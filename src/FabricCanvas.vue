@@ -7,8 +7,8 @@ type Mode = '选择' | '移动' | '画笔' | '文字'
 let canvas: fabric.Canvas
 let mode: Mode = '选择'
 let isMoving = false
-let history: string[] = shallowReactive([])
-let redoStack: string[] = shallowReactive([])
+const history: string[] = shallowReactive([])
+const redoStack: string[] = shallowReactive([])
 let pencilBrush: fabric.PencilBrush
 let currentEditImg: fabric.FabricImage
 let dirty = ref(false) // 是否有未保存的更改
@@ -48,6 +48,8 @@ async function initImage() {
   currentEditImg.set({
     left: canvas.width / 2 - (currentEditImg.width * scaleFactor) / 2,
     top: canvas.height / 2 - (currentEditImg.height * scaleFactor) / 2,
+    selectable: false, // Make the object not selectable
+    controls: false,
   })
   currentEditImg.hoverCursor = 'default'
 }
@@ -69,12 +71,19 @@ function initEventListener() {
   })
 
   canvas.on('mouse:down', (opt) => {
+    if (mode === '选择' && opt.target) {
+      // ?: 选择模式下，点击到对象上，将对象设置为活动对象
+      // canvas.setActiveObject(opt.target)
+    }
+
     if (mode === '移动' && opt && opt.e) {
       isMoving = true
+      return
     }
 
     if (mode === '画笔' && dirty.value === true) {
       saveState()
+      return
     }
 
     if (mode === '文字') {
@@ -94,13 +103,12 @@ function initEventListener() {
       const textbox = new fabric.Textbox('', {
         left: pointer.x,
         top: pointer.y,
-        width: 150,
-        fontSize: 20,
+        fontSize: textSize.value,
         borderColor: 'yellow',
+        width: 150,
         hasControls: true,
-        fill: 'red',
+        fill: textPaletteOptions[currentTextColor.value].color,
       })
-
       canvas.add(textbox)
       canvas.setActiveObject(textbox)
       textbox.enterEditing()
@@ -108,6 +116,7 @@ function initEventListener() {
       activeTextBox = textbox
     }
   })
+
   canvas.on('mouse:up', (opt) => {
     if (opt && opt.e && mode === '移动') {
       isMoving = false
@@ -118,7 +127,7 @@ function initEventListener() {
     }
   })
 
-  // 画布缩放相关事件
+  // 画布缩放
   canvas.on('mouse:wheel', (opt) => {
     const delta = opt.e.deltaY
     const direction = delta > 0 ? -1 : 1
@@ -132,6 +141,14 @@ function initEventListener() {
     opt.e.stopPropagation()
     console.log(canvas.toJSON())
   })
+  canvas.on('after:render', () => {
+    console.log('rendered')
+    canvas.getObjects().forEach((obj) => {
+      if (obj.type === 'Image') {
+        obj.selectable = false
+      }
+    })
+  })
 }
 
 function completeTextInput() {
@@ -139,6 +156,7 @@ function completeTextInput() {
     activeTextBox.exitEditing()
     // canvas.remove(activeTextBox) // Optionally disable text mode after adding text
     canvas.renderAll()
+    activeTextBox = undefined
     toggleMode('选择')
   }
 }
@@ -194,15 +212,24 @@ async function handleRedo() {
   console.log('redo', redoStack)
   console.log('undo', history)
 }
-
+declare global {
+  interface Window {
+    canvas: fabric.Canvas
+  }
+}
 async function init() {
   canvas = new fabric.Canvas('canvas', {
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
     backgroundColor: 'rgb(245, 245, 245)',
   })
-  canvas.preserveObjectStacking = true // 在选择时保持对象的堆叠顺序
 
+  window.canvas = canvas
+  canvas.preserveObjectStacking = true // 在选择时保持对象的堆叠顺序
+  group = new fabric.Group([], {
+    width: canvas.width,
+    height: canvas.height,
+  })
   initBrush()
   await initImage()
 
@@ -211,21 +238,37 @@ async function init() {
   // 画布移动逻辑
   initEventListener()
 
-  // canvas.on('object:added', saveState)
-  // canvas.on('object:modified', saveState)
-  // canvas.on('object:removed', saveState)
-}
-let currentMode = ref<Mode>('选择')
+  canvas.on('object:added', (e) => {
+    console.log(e)
 
+    canvas.getObjects().forEach((obj) => {
+      obj.borderColor = '#409eff' // 设置选中时的边框颜色
+      obj.hasControls = false // 禁用缩放，旋转控制器
+      obj.borderScaleFactor = 2 // 设置边框的大小
+    })
+  })
+  // canvas.on('object:moving',() => {
+  //   saveState()
+  // })
+  // canvas.on('object:modified', () => {
+  //   saveState()
+  // })
+  // canvas.on('object:removed', () => {
+  //   saveState()
+  // })
+}
+
+let currentMode = ref<Mode>('选择')
+let group: fabric.Group
 function handleRotate(direction: 'left' | 'right') {
   // 旋转整个画布(将所有对象放入一个group中，然后旋转group)
-  const group = new fabric.Group([], {
-    width: canvas.width,
-    height: canvas.height,
-  })
+  group.removeAll()
   group.add(...canvas.getObjects())
-  // canvas.add(group)
-  group.rotate((group.angle || 0) + (direction === 'left' ? -90 : 90))
+  const rotationAmount = direction === 'left' ? -90 : 90
+  group.rotate((group.angle || 0) + rotationAmount)
+  canvas.clear()
+  canvas.add(...group.getObjects())
+
   canvas.renderAll()
 
   console.log(canvas.toJSON())
@@ -280,6 +323,7 @@ function handleSelect() {
   canvas.isDrawingMode = false
   canvas.selection = true
   canvas.forEachObject((obj) => (obj.selectable = true))
+  currentEditImg.selectable = false
   canvas.defaultCursor = 'default'
 }
 // 画笔模式
@@ -288,7 +332,7 @@ function handleBrush() {
 
   canvas.freeDrawingBrush = pencilBrush
 }
-// 移动模式：对整个画布进行移动
+// 移动模式：对整个画布进行移动，这里只改变cursor样式，相关事件在initEventListener中处理
 function handleMove() {
   canvas.forEachObject((obj) => {
     obj.hoverCursor = 'grab'
@@ -297,7 +341,7 @@ function handleMove() {
 }
 
 // 文字模式
-let activeTextBox: fabric.Textbox
+let activeTextBox: fabric.Textbox | undefined
 function handleText() {}
 function handleDownload() {
   // 为了导出图片，需要将画布缩放，偏移等操作还原
@@ -339,11 +383,119 @@ const modes = ref<{ label: Mode; event: Function }[]>([
     event: handleText,
   },
 ])
+
+// 画笔颜色，粗细
+const brushPaletteOptions = reactive([
+  { id: 1, color: '#e03131' },
+  { id: 2, color: '#1e1e1e' },
+  { id: 3, color: '#2f9e44' },
+  { id: 4, color: '#fc8c00' },
+  { id: 5, color: '#1971c2' },
+])
+const currentBrushColor = ref(0)
+function handleColorChange(color: number) {
+  currentBrushColor.value = color
+  pencilBrush.color = brushPaletteOptions[color].color
+}
+const brushSize = ref(3)
+function handleBrushSizeChange(size: number) {
+  pencilBrush.width = size
+}
+
+// 文字颜色，粗细
+const textPaletteOptions = reactive([
+  { id: 1, color: '#e03131' },
+  { id: 2, color: '#1e1e1e' },
+  { id: 3, color: '#2f9e44' },
+  { id: 4, color: '#fc8c00' },
+  { id: 5, color: '#1971c2' },
+])
+const currentTextColor = ref(0)
+function handleTextColorChange(colorIndex: number) {
+  currentTextColor.value = colorIndex
+  if (activeTextBox) {
+    activeTextBox.fill = textPaletteOptions[colorIndex].color
+    activeTextBox.text = activeTextBox.text + '1'
+    canvas.renderAll()
+  }
+}
+const textSize = ref(20)
+function handleTextSizeChange(size: number) {
+  console.log(activeTextBox)
+  if (activeTextBox) {
+    activeTextBox.fontSize = size
+    // activeTextBox.set({ text: activeTextBox.text + ' ' })
+    activeTextBox.setSelectionStyles({
+      fontSize: size,
+    })
+    canvas.renderAll()
+  }
+  const activeObject = canvas.getActiveObject()
+  if (activeObject && activeObject.type === 'textbox') {
+    activeObject.set({ fontSize: size })
+    canvas.renderAll()
+  }
+}
 </script>
 
 <template>
   <div class="flex items-center flex-col gap-5 mt-3">
     <canvas id="canvas" class="shadow-md"></canvas>
+
+    <div class="fixed top-100px left-[20px] bg-white shadow-md w-200px h-500px rounded-md">
+      <div class="p-3 flex flex-col gap-3">
+        <div>
+          <div class="text-sm mb-2 text-#1e1e1e">画笔颜色</div>
+          <div class="flex justify-between">
+            <div
+              v-for="(color, index) in brushPaletteOptions"
+              :key="color.id"
+              class="w-5 h-5 cursor-pointer rounded-sm"
+              :class="{ 'outline outline-1 outline-offset-2': index === currentBrushColor }"
+              :style="{ background: `${color.color}` }"
+              @click="handleColorChange(index)"
+            ></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-sm mb-2 text-#1e1e1e">画笔粗细</div>
+          <div class="">
+            <n-slider
+              v-model:value="brushSize"
+              @update:value="handleBrushSizeChange"
+              :step="1"
+              :min="0"
+              :max="10"
+            />
+          </div>
+        </div>
+        <div>
+          <div class="text-sm mb-2 text-#1e1e1e">文字颜色</div>
+          <div class="flex justify-between">
+            <div
+              v-for="(color, index) in brushPaletteOptions"
+              :key="color.id"
+              class="w-5 h-5 cursor-pointer rounded-sm"
+              :class="{ 'outline outline-1 outline-offset-2': index === currentTextColor }"
+              :style="{ background: `${color.color}` }"
+              @click="handleTextColorChange(index)"
+            ></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-sm mb-2 text-#1e1e1e">文字大小</div>
+          <div class="">
+            <n-slider
+              v-model:value="textSize"
+              @update:value="handleTextSizeChange"
+              :step="2"
+              :min="10"
+              :max="100"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
     <n-space align="center">
       <n-space align="center" class="bg-[#ECECF4] rounded-md">
         <!-- 缩小 -->
