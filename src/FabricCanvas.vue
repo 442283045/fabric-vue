@@ -7,8 +7,12 @@ type Mode = '选择' | '移动' | '画笔' | '文字'
 let canvas: fabric.Canvas
 let mode: Mode = '选择'
 let isMoving = false
-const history: string[] = shallowReactive([])
-const redoStack: string[] = shallowReactive([])
+interface FabricState {
+  objects: fabric.FabricObject[]
+  background: string
+}
+const history: FabricState[] = shallowReactive([])
+const redoStack: FabricState[] = shallowReactive([])
 let pencilBrush: fabric.PencilBrush
 let currentEditImg: fabric.FabricImage
 let dirty = ref(false) // 是否有未保存的更改
@@ -165,7 +169,7 @@ function completeTextInput() {
  * 保存画布状态
  */
 function saveState(resetRedo = true) {
-  history.push(canvas.toJSON())
+  history.push(JSON.parse(JSON.stringify(canvas.toJSON())))
   if (resetRedo) {
     redoStack.length = 0
   }
@@ -186,6 +190,7 @@ async function handleUndo() {
       saveState(false)
       redoStack.push(history.pop()!)
       await canvas.loadFromJSON(history.pop()!)
+      historyRotation()
       dirty.value = true
     } else {
       const currentState = history.pop()!
@@ -197,6 +202,19 @@ async function handleUndo() {
 
   console.log('undo', history)
   console.log('redo', redoStack)
+}
+// Use to rotate the canvas when undo/redo
+function historyRotation() {
+  const newGroup = new fabric.Group([], {
+    width: canvas.width,
+    height: canvas.height,
+  })
+  newGroup.add(...canvas.getObjects())
+  newGroup.rotate(group.angle)
+  newGroup.remove(...newGroup.getObjects())
+  canvas.renderAll()
+
+  console.log(canvas.toJSON())
 }
 // 重做
 async function handleRedo() {
@@ -266,8 +284,7 @@ function handleRotate(direction: 'left' | 'right') {
   group.add(...canvas.getObjects())
   const rotationAmount = direction === 'left' ? -90 : 90
   group.rotate((group.angle || 0) + rotationAmount)
-  canvas.clear()
-  canvas.add(...group.getObjects())
+  group.remove(...group.getObjects())
 
   canvas.renderAll()
 
