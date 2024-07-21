@@ -57,11 +57,29 @@ async function initImage() {
   })
   currentEditImg.hoverCursor = 'default'
 }
+// class CustomBrush extends fabric.PencilBrush {
+//   _addPoint(point: fabric.Point) {
+//     if (
+//       point.x >= clippingPath.left &&
+//       point.x <= clippingPath.left + clippingPath.width &&
+//       point.y >= clippingPath.top &&
+//       point.y <= clippingPath.top + clippingPath.height
+//     ) {
+//       console.log('add point')
+//       return super._addPoint(point)
+//     }
+//     this.onMouseDown(point)
+//     return false
+//   }
+
+// }
+
 function initBrush() {
   pencilBrush = new fabric.PencilBrush(canvas)
   pencilBrush.color = 'red'
   pencilBrush.width = 3
 }
+let isActiveDrawing = false
 function initEventListener() {
   // 画布移动相关事件
   canvas.on('mouse:move', (opt) => {
@@ -71,6 +89,22 @@ function initEventListener() {
       vpt[4] += e.movementX
       vpt[5] += e.movementY
       canvas.requestRenderAll()
+      return
+    }
+    if (mode === '画笔' && canvas.isDrawingMode) {
+      // const pointer = new fabric.Point(opt.e as any)
+      // const pointer = canvas.getViewportPoint(opt.e)
+      // console.log({
+      //   contain: clippingPath.containsPoint(pointer),
+      //   isActiveDrawing,
+      // })
+      // console.log({ isContain: clippingPath.containsPoint(pointer), isActiveDrawing })
+      // if (!clippingPath.containsPoint(pointer) && isActiveDrawing) {
+      //   console.log('exit drawing mode')
+      //   canvas.freeDrawingBrush!.color = 'transparent'
+      // } else {
+      //   canvas.freeDrawingBrush!.color = brushPaletteOptions[currentBrushColor.value].color
+      // }
     }
   })
 
@@ -78,6 +112,7 @@ function initEventListener() {
     if (mode === '选择' && opt.target) {
       // ?: 选择模式下，点击到对象上，将对象设置为活动对象
       // canvas.setActiveObject(opt.target)
+      return
     }
 
     if (mode === '移动' && opt && opt.e) {
@@ -85,8 +120,16 @@ function initEventListener() {
       return
     }
 
-    if (mode === '画笔' && dirty.value === true) {
-      saveState()
+    if (mode === '画笔') {
+      const pointer = canvas.getViewportPoint(opt.e)
+      console.log(clippingPath.containsPoint(pointer))
+      if (clippingPath.containsPoint(pointer)) {
+        console.log('set active drawing')
+        isActiveDrawing = true
+      }
+      if (dirty.value === true) {
+        saveState()
+      }
       return
     }
 
@@ -128,6 +171,7 @@ function initEventListener() {
     // 画笔模式下，将画笔绘制的路径添加到group中
     if (mode === '画笔') {
       dirty.value = true
+      isActiveDrawing = false
     }
   })
 
@@ -235,6 +279,26 @@ declare global {
     canvas: fabric.Canvas
   }
 }
+// 适应图片大小
+let clippingPath: fabric.Rect
+function clipCanvasToFitImage() {
+  clippingPath = new fabric.Rect({
+    left: 0,
+    top: 0,
+    width: currentEditImg.getScaledWidth(),
+    height: currentEditImg.getScaledHeight(),
+    absolutePositioned: true,
+  })
+
+  // Offset the clipping path to match the image position
+  clippingPath.set({
+    left: currentEditImg.left,
+    top: currentEditImg.top,
+  })
+
+  // Set the clipping path to the canvas
+  canvas.clipPath = clippingPath
+}
 async function init() {
   canvas = new fabric.Canvas('canvas', {
     width: CANVAS_WIDTH,
@@ -250,8 +314,8 @@ async function init() {
   })
   initBrush()
   await initImage()
-
   canvas.add(currentEditImg)
+  clipCanvasToFitImage()
   saveState()
   // 画布移动逻辑
   initEventListener()
@@ -337,7 +401,6 @@ function toggleMode(mode: Mode) {
 
 // 选择模式
 function handleSelect() {
-  canvas.isDrawingMode = false
   canvas.selection = true
   canvas.forEachObject((obj) => (obj.selectable = true))
   currentEditImg.selectable = false
@@ -346,7 +409,7 @@ function handleSelect() {
 // 画笔模式
 function handleBrush() {
   canvas.isDrawingMode = true
-
+  console.log(canvas.isDrawingMode)
   canvas.freeDrawingBrush = pencilBrush
 }
 // 移动模式：对整个画布进行移动，这里只改变cursor样式，相关事件在initEventListener中处理
@@ -458,7 +521,6 @@ function handleTextSizeChange(size: number) {
 <template>
   <div class="flex items-center flex-col gap-5 mt-3">
     <canvas id="canvas" class="shadow-md"></canvas>
-
     <div class="fixed top-100px left-[20px] bg-white shadow-md w-200px h-500px rounded-md">
       <div class="p-3 flex flex-col gap-3">
         <div>
